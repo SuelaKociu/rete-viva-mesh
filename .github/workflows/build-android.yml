@@ -3,10 +3,26 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths:
+      - ".github/workflows/build-android.yml"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "app/**"
   pull_request:
     branches: [main]
+    paths:
+      - ".github/workflows/build-android.yml"
+      - "settings.gradle.kts"
+      - "build.gradle.kts"
+      - "app/**"
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,13 +33,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Prepara Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - run: gradle :app:testDebugUnitTest :app:assembleDebug --no-daemon
-      - if: success()
+      - name: Installa piattaforma Android 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Test e compilazione APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
+      - name: Pubblica APK sperimentale
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: reteviva-prototipo-debug
